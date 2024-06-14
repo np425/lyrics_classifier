@@ -22,26 +22,18 @@ class SongClassifier:
 
         print("Forming features and calculating probabilities...")
         for song in songs:
-            #print("Song:", song.name, end='|')
-            
             features, probabilities = self.form_features(song.lyrics)
-
-            #print(f"Formed song {len(features)} features")
 
             self.songs_features.append(features)
             self.songs_probabilities.append(probabilities)
 
         print("Sorting features...")
         for i, song in enumerate(self.songs):
-            #print("Song:", song.name, end='|')
-
             sorted_features_probabilities = sorted(zip(self.songs_features[i], self.songs_probabilities[i]))
             sorted_features, sorted_probabilities = zip(*sorted_features_probabilities)
 
             self.songs_features[i] = sorted_features
             self.songs_probabilities[i] = sorted_probabilities
-
-            #print("Sorted")
 
         print("Total features:", sum(len(row) for row in self.songs_features))
         print("Optimising features...")
@@ -63,15 +55,13 @@ class SongClassifier:
         self.features = features
         self.probabilities = probabilities
 
-
     def predict(self, words: str):
         feature_set, probabilities = self.form_features(words)
-        pprint(feature_set)
 
         # Map features to existing ones
         index_map = {string: index for index, string in enumerate(self.features)}
 
-        calc_1 = [1] * len(self.songs)
+        prob_class_and = [1] * len(self.songs)
 
         for song_id, song in enumerate(self.songs):
             for feature in feature_set:
@@ -79,17 +69,13 @@ class SongClassifier:
 
                 if index != -1:
                     index = index_map[feature]
-                    calc_1[song_id] *= self.probabilities[song_id][index]
+                    prob_class_and[song_id] *= self.probabilities[song_id][index]
 
-        #print(calc_1)
+        prob_total_sum = sum(prob_class_and)
 
-        calc_2 = sum(calc_1)
-        #print(calc_2)
+        prob_class = [x / prob_total_sum if prob_total_sum != 0 else 0 for x in prob_class_and]
 
-        calc_3 = [x / calc_2 if calc_2 != 0 else 0 for x in calc_1]
-        #print(calc_3)
-
-        results = list(sorted(zip(calc_3, self.songs)))
+        results = list(sorted(zip(prob_class, self.songs)))
         for idx, (prob, song) in enumerate(results):
             idx = len(self.songs) - idx
             print(f"{idx}. {song.artist} - {song.name}: {prob}")
@@ -97,6 +83,8 @@ class SongClassifier:
         best_result = results[len(self.songs) - 1]
         best_song = best_result[1]
         print(best_song.lyrics)
+
+
 
     # Returns features, probabilities
     def form_features(self, words: str) -> tuple[list[str], list[float]]:
@@ -127,12 +115,6 @@ class SongClassifier:
         counts = Counter(feature_list)
         probabilities = [counts[feature] / len(feature_list) for feature in feature_set]
 
-        # print("---- Feature Set: ---- Total:", len(feature_set))
-        # pprint(list(zip(feature_set, probabilities)))
-        #
-        # print("---- Feature List: ---- Total:", len(feature_list))
-        # pprint(feature_list)
-
         return probabilities
 
 
@@ -156,7 +138,6 @@ def form_song(data: str) -> Song:
                 metadata_dict[key] = value
 
     song = Song(lyrics=lyrics, **metadata_dict)
-    #print(f"Formed song {song.artist} - {song.name}")
     return song
 
 
@@ -167,7 +148,7 @@ def main(argv: list[str]):
     songs = list()
 
     print("Adding songs...")
-    for root, dirs, files in os.walk(song_directory):
+    for root, _, files in os.walk(song_directory):
         for file in files:
             #print("Found song", file)
             path = os.path.join(root, file)
@@ -228,14 +209,7 @@ def merge_sorted_arrays(arrays: list[list]):
     return sorted_list
 
 
-
-
-
-
-
 if __name__ == "__main__":
     main(sys.argv)
 
-#pprint(generate_ngrams(words, 2))
-#pprint(calculate_percentages(words))
 
