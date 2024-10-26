@@ -1,12 +1,12 @@
 from typing import NamedTuple
 from collections import Counter
-import sys
-from pprint import pprint
 import re
 import os
 import heapq
+import argparse
 
 MAX_N_GRAMS = 2
+
 
 class Song(NamedTuple):
     name: str
@@ -14,11 +14,12 @@ class Song(NamedTuple):
     album: str
     lyrics: str
 
+
 class SongClassifier:
     def __init__(self, songs: list[Song]):
         self.songs = songs
-        self.songs_features = list() 
-        self.songs_probabilities = list()  
+        self.songs_features = list()
+        self.songs_probabilities = list()
 
         print("Forming features and calculating probabilities...")
         for song in songs:
@@ -29,7 +30,9 @@ class SongClassifier:
 
         print("Sorting features...")
         for i, song in enumerate(self.songs):
-            sorted_features_probabilities = sorted(zip(self.songs_features[i], self.songs_probabilities[i]))
+            sorted_features_probabilities = sorted(
+                zip(self.songs_features[i], self.songs_probabilities[i])
+            )
             sorted_features, sorted_probabilities = zip(*sorted_features_probabilities)
 
             self.songs_features[i] = sorted_features
@@ -73,7 +76,9 @@ class SongClassifier:
 
         prob_total_sum = sum(prob_class_and)
 
-        prob_class = [x / prob_total_sum if prob_total_sum != 0 else 0 for x in prob_class_and]
+        prob_class = [
+            x / prob_total_sum if prob_total_sum != 0 else 0 for x in prob_class_and
+        ]
 
         results = list(sorted(zip(prob_class, self.songs)))
         for idx, (prob, song) in enumerate(results):
@@ -84,16 +89,14 @@ class SongClassifier:
         best_song = best_result[1]
         print(best_song.lyrics)
 
-
-
     # Returns features, probabilities
     def form_features(self, words: str) -> tuple[list[str], list[float]]:
-        features = re.split(r'[^\w]+', words.strip())
+        features = re.split(r"[^\w]+", words.strip())
         features = [feature.lower() for feature in features]
 
         # Generate n-grams
         ngrams = [self.generate_ngrams(features, i) for i in range(MAX_N_GRAMS)]
-        
+
         # Calculate probabilities
         probabilities = list()
         feature_set = list()
@@ -109,7 +112,7 @@ class SongClassifier:
 
     def generate_ngrams(self, words: list[str], n: int) -> list[str]:
         ngrams = zip(*[words[i:] for i in range(n)])
-        return [' '.join(ngram) for ngram in ngrams]
+        return [" ".join(ngram) for ngram in ngrams]
 
     def calculate_probabilities(self, feature_set: list[str], feature_list: list[str]):
         counts = Counter(feature_list)
@@ -118,17 +121,17 @@ class SongClassifier:
         return probabilities
 
 
-
 # ----------------------------------------
 
+
 def form_song(data: str) -> Song:
-    lyrics, metadata = re.split(r'\n_{5,}\n', data.strip())
-    allowed_keys = ['name', 'artist', 'album', 'lyrics']
+    lyrics, metadata = re.split(r"\n_{5,}\n", data.strip())
+    allowed_keys = ["name", "artist", "album", "lyrics"]
 
     metadata = metadata.splitlines()
     metadata_dict = {}
     for entry in metadata:
-        idx = entry.find(' ')
+        idx = entry.find(" ")
 
         if idx != -1:
             key = entry[:idx].lower()
@@ -141,21 +144,18 @@ def form_song(data: str) -> Song:
     return song
 
 
-
-def main(argv: list[str]):
-    song_directory = argv[1]
+def main(song_directory: str):
     song_paths = list()
     songs = list()
 
     print("Adding songs...")
     for root, _, files in os.walk(song_directory):
         for file in files:
-            #print("Found song", file)
             path = os.path.join(root, file)
             song_paths.append(path)
 
     print("Total found songs:", len(song_paths))
-    
+
     print("Forming songs...")
     for i, song_path in enumerate(song_paths):
         try:
@@ -169,11 +169,7 @@ def main(argv: list[str]):
             continue
 
     print("Total found songs:", len(song_paths))
-    print('Total formed songs:', len(songs))
-
-    print("Saving songs...")
-    with open("song_names.txt", "w") as f:
-        f.writelines((f"{song.artist} - {song.name}\n" for song in songs))
+    print("Total formed songs:", len(songs))
 
     classifier = SongClassifier(songs)
 
@@ -186,30 +182,39 @@ def main(argv: list[str]):
 def merge_sorted_arrays(arrays: list[list]):
     min_heap = []
     last_inserted = None
-    
+
     # Initialize the heap with the first element of each array along with the array index and element index
     for array_index, array in enumerate(arrays):
         if array:  # Ensure the array is not empty
             heapq.heappush(min_heap, (array[0], array_index, 0))
-    
+
     sorted_list = []
-    
+
     while min_heap:
         value, array_index, element_index = heapq.heappop(min_heap)
 
         if value != last_inserted:
             sorted_list.append(value)
             last_inserted = value
-        
+
         # If there are more elements in the same array, add the next element to the heap
         if element_index + 1 < len(arrays[array_index]):
             next_value = arrays[array_index][element_index + 1]
             heapq.heappush(min_heap, (next_value, array_index, element_index + 1))
-    
+
     return sorted_list
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    parser = argparse.ArgumentParser(
+        description="Song classifier with lyrics-based prediction"
+    )
+    parser.add_argument(
+        "song_database",
+        nargs="?",
+        default="lyrics-database/database",
+        help="Path to the song database directory",
+    )
+    args = parser.parse_args()
 
-
+    main(args.song_database)
